@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atom Explorer: ผจญภัยในโลกเคมีอินทรีย์</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #e0f7fa; /* สีฟ้าอ่อนเหมือนห้องแล็บ */
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #00796b; /* สีเขียวเข้ม */
+        }
+        #game-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .question {
+            font-size: 18px;
+            margin: 20px 0;
+        }
+        .options {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .option {
+            background: #b2dfdb; /* สีเขียวอ่อน */
+            border: 2px solid #00796b;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px;
+            cursor: pointer;
+            width: 200px;
+            transition: background 0.3s;
+        }
+        .option:hover {
+            background: #80cbc4;
+        }
+        #drag-container {
+            display: none;
+            margin: 20px 0;
+        }
+        .draggable {
+            background: #ffecb3; /* สีเหลืองอ่อน */
+            border: 2px solid #ffa000;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px;
+            cursor: move;
+            width: 150px;
+            display: inline-block;
+        }
+        .droppable {
+            background: #e0e0e0;
+            border: 2px dashed #757575;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px auto;
+            width: 300px;
+            min-height: 50px;
+        }
+        #feedback {
+            font-size: 16px;
+            color: #d32f2f; /* สีแดงสำหรับ feedback */
+            margin: 10px 0;
+        }
+        #score {
+            font-size: 20px;
+            color: #388e3c; /* สีเขียวสำหรับคะแนน */
+        }
+        button {
+            background: #00796b;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        button:hover {
+            background: #004d40;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>🧑‍🔬 Atom Explorer: ผจญภัยในโลกเคมีอินทรีย์ 🧪</h1>
+        <p>ยินดีต้อนรับ! ช่วยฉันแก้ปริศนาเคมีเพื่อรวบรวมคริสตัลโมเลกุลสิ! แต่ละด่านจะสอนเรื่องชื่อสารและโครงสร้างคาร์บอน</p>
+        <button id="start-btn">เริ่มผจญภัย!</button>
+        <div id="quiz" style="display: none;">
+            <div class="question" id="question-text"></div>
+            <div class="options" id="options-container"></div>
+            <div id="drag-container">
+                <p>ลากชื่อหรือโครงสร้างไปวางให้ตรงกัน!</p>
+                <div id="draggables"></div>
+                <div class="droppable" id="drop-zone"></div>
+            </div>
+            <div id="feedback"></div>
+            <div id="score">คะแนน: 0</div>
+            <button id="next-btn" style="display: none;">ด่านต่อไป</button>
+        </div>
+        <div id="end-screen" style="display: none;">
+            <h2>จบการผจญภัย! 🏆</h2>
+            <p id="final-score"></p>
+            <button id="restart-btn">เล่นใหม่</button>
+        </div>
+    </div>
+
+    <script>
+        const questions = [
+            { // ด่าน 1: Multiple choice - ชื่อ IUPAC
+                type: 'multiple',
+                question: 'ชื่อ IUPAC ของสูตรโครงสร้างแบบย่อ CH3-CH2-OH คืออะไร? (รูปแบบ condensed)',
+                options: ['Methane', 'Ethane', 'Ethanol', 'Ethene'],
+                answer: 'Ethanol',
+                explanation: 'Ethanol คือแอลกอฮอล์ที่มี 2 คาร์บอน ปลายสุดมี -OH'
+            },
+            { // ด่าน 2: Multiple choice - รูปแบบโครงสร้าง
+                type: 'multiple',
+                question: 'สูตรโครงสร้างแบบเส้น (line-bond) ของ Ethene คืออะไร?',
+                options: ['C-C', 'C=C', 'C≡C', 'C-O'],
+                answer: 'C=C',
+                explanation: 'Ethene มีพันธะคู่ระหว่างคาร์บอนสองตัว'
+            },
+            { // ด่าน 3: Multiple choice - ชื่อจากโครงสร้าง
+                type: 'multiple',
+                question: 'สารประกอบที่มีโครงสร้างแบบจุด •CH3-CH3• คืออะไร? (dot structure อย่างง่าย)',
+                options: ['Methane', 'Ethane', 'Propane', 'Butane'],
+                answer: 'Ethane',
+                explanation: 'Ethane มี 2 คาร์บอนและ 6 ไฮโดรเจน เชื่อมด้วยพันธะเดี่ยว'
+            },
+            { // ด่าน 4: Drag-and-drop - จับคู่ชื่อกับโครงสร้าง
+                type: 'drag',
+                question: 'ลากชื่อไปวางกับโครงสร้างที่ถูกต้อง!',
+                draggables: ['Propane', 'Propanol'],
+                targets: ['CH3-CH2-CH3', 'CH3-CH2-CH2-OH'],
+                matches: { 'Propane': 'CH3-CH2-CH3', 'Propanol': 'CH3-CH2-CH2-OH' }
+            },
+            { // ด่าน 5: Drag-and-drop - จับคู่รูปแบบโครงสร้าง
+                type: 'drag',
+                question: 'ลากรูปแบบโครงสร้างไปวางกับชื่อที่ถูกต้อง!',
+                draggables: ['C-C-C (line)', 'CH3CH2CH3 (condensed)'],
+                targets: ['Propane', 'Propane'],
+                matches: { 'C-C-C (line)': 'Propane', 'CH3CH2CH3 (condensed)': 'Propane' }
+            }
+        ];
+
+        let currentQuestion = 0;
+        let score = 0;
+        let draggedItem = null;
+
+        const startBtn = document.getElementById('start-btn');
+        const quizDiv = document.getElementById('quiz');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const dragContainer = document.getElementById('drag-container');
+        const draggablesDiv = document.getElementById('draggables');
+        const dropZone = document.getElementById('drop-zone');
+        const feedback = document.getElementById('feedback');
+        const scoreDisplay = document.getElementById('score');
+        const nextBtn = document.getElementById('next-btn');
+        const endScreen = document.getElementById('end-screen');
+        const finalScore = document.getElementById('final-score');
+        const restartBtn = document.getElementById('restart-btn');
+
+        startBtn.addEventListener('click', startGame);
+        nextBtn.addEventListener('click', nextQuestion);
+        restartBtn.addEventListener('click', resetGame);
+
+        function startGame() {
+            startBtn.style.display = 'none';
+            quizDiv.style.display = 'block';
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            feedback.textContent = '';
+            optionsContainer.innerHTML = '';
+            draggablesDiv.innerHTML = '';
+            dropZone.innerHTML = '';
+            dragContainer.style.display = 'none';
+
+            const q = questions[currentQuestion];
+            questionText.textContent = q.question;
+
+            if (q.type === 'multiple') {
+                q.options.forEach(opt => {
+                    const div = document.createElement('div');
+                    div.classList.add('option');
+                    div.textContent = opt;
+                    div.addEventListener('click', () => checkAnswer(opt, q.answer, q.explanation));
+                    optionsContainer.appendChild(div);
+                });
+            } else if (q.type === 'drag') {
+                dragContainer.style.display = 'block';
+                q.draggables.forEach(drag => {
+                    const div = document.createElement('div');
+                    div.classList.add('draggable');
+                    div.textContent = drag;
+                    div.draggable = true;
+                    div.addEventListener('dragstart', () => draggedItem = drag);
+                    draggablesDiv.appendChild(div);
+                });
+                // สำหรับ drop zone แสดง target หนึ่งตัวต่อครั้ง แต่เพื่อความง่าย แสดง drop zone เดียวและ check match
+                dropZone.textContent = 'วางที่นี่สำหรับ: ' + q.targets[0]; // แสดง target แรก (สามารถขยายได้)
+                dropZone.addEventListener('dragover', e => e.preventDefault());
+                dropZone.addEventListener('drop', () => {
+                    if (draggedItem && q.matches[draggedItem] === q.targets[0]) {
+                        checkAnswer(draggedItem, draggedItem, 'ถูกต้อง! การจับคู่ตรงกัน');
+                    } else {
+                        checkAnswer(null, null, 'ผิด! ลองใหม่');
+                    }
+                });
+            }
+        }
+
+        function checkAnswer(selected, correct, exp) {
+            if (selected === correct) {
+                feedback.textContent = 'ถูกต้อง! ' + exp;
+                feedback.style.color = '#388e3c';
+                score += 10;
+                scoreDisplay.textContent = 'คะแนน: ' + score;
+            } else {
+                feedback.textContent = 'ผิด! คำตอบที่ถูกคือ ' + correct + '. ' + exp;
+                feedback.style.color = '#d32f2f';
+            }
+            nextBtn.style.display = 'block';
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            if (currentQuestion < questions.length) {
+                loadQuestion();
+                nextBtn.style.display = 'none';
+            } else {
+                showEndScreen();
+            }
+        }
+
+        function showEndScreen() {
+            quizDiv.style.display = 'none';
+            endScreen.style.display = 'block';
+            finalScore.textContent = 'คะแนนรวม: ' + score + '/50 ถ้าครบ 50 คุณได้เหรียญทองโมเลกุล! 🎉';
+        }
+
+        function resetGame() {
+            currentQuestion = 0;
+            score = 0;
+            scoreDisplay.textContent = 'คะแนน: 0';
+            endScreen.style.display = 'none';
+            startBtn.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
